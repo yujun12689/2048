@@ -50,8 +50,7 @@ public:
 
 	static int fib(int i){
 		int fib[]={ 0, 1, 2, 3, 5, 8, 13, 21, 
-34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 
-46368, 75025};
+					34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025};
 		return fib[i];
 	}
 
@@ -101,9 +100,9 @@ public:
 				if (tile == 0) continue;
 				row[c] = 0;
 				if (hold) {
-					if (std::abs(tile - hold)==1 || (tile == 1 && hold == 1)) {
+					if (std::abs(tile - hold) == 1 || (tile == 1 && hold == 1)) {
 						tile = std::max(tile, hold) + 1;
-						row[top++] = ++tile;
+						row[top++] = tile;
 						score += fib(tile);
 						hold = 0;
 					} else {
