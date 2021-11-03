@@ -89,7 +89,7 @@ public:
 		int best_op = -1;
 		int best_reward = -1;
 		int best_value = -99999;
-
+		board best_after;
 		for(int op : {0, 1, 2, 3}){
 			board after = before;
 			int reward = after.slide(op);
@@ -100,15 +100,39 @@ public:
 				best_op = op;
 				best_reward = reward;
 				best_value = value;
+				best_after = after;
 			}
 		}
-
-		return action(best_op);
+		if(best_op != -1){
+			history.push_back({best_reward, best_after});
+		}
+		return action::slide(best_op);
 	}
 
-	int extract_feature(const board& after ,int a, int b, int c,int d){
+
+	virtual void open_episode(const std::string& flag = "") {
+		history.clear();
+	}
+	virtual void close_episode(const std::string& flag = "") {
+		if(history.empty()) return;
+		if(alpha == 0 ) return;
+		adjust_value(history[history.size() - 1].after, 0);
+		for(int t = history.size() - 2; t >= 0; t--){
+			adjust_value(history[t].after, history[t + 1].reward + estimate_value(history[t + 1].after));
+		}
+	}
+
+	struct step {
+		int reward;
+		board after;
+	};
+
+	std::vector<step> history;
+
+	int extract_feature(const board& after ,int a, int b, int c,int d) const {
 		return after(a) * 25 * 25 *25 + after(b) * 25 *25 + after(c) * 25 + after(d);
 	}
+
 	float estimate_value(const board& after) const {
 		float value = 0;
 		value += net[0][extract_feature(after, 0, 1, 2, 3)];
@@ -118,10 +142,22 @@ public:
 		value += net[4][extract_feature(after, 0, 4, 8, 12)];
 		value += net[5][extract_feature(after, 1, 5, 9, 13)];
 		value += net[6][extract_feature(after, 2, 6, 10, 14)];
-		value += net[7][extract_feature(after, 3, 7, 11, 15];
+		value += net[7][extract_feature(after, 3, 7, 11, 15)];
 		return value;
 	}
-
+	void adjust_value(const board& after, float target){
+		float current = estimate_value(after);
+		float error = target - current;
+		float adjust = alpha * error;
+		net[0][extract_feature(after, 0, 1, 2, 3)] += adjust;
+		net[1][extract_feature(after, 4, 5, 6, 7)] += adjust;
+		net[2][extract_feature(after, 8 ,9 ,10 ,11)] += adjust;
+		net[3][extract_feature(after, 12 ,13 ,14 ,15)] += adjust;
+		net[4][extract_feature(after, 0, 4, 8, 12)] += adjust;
+		net[5][extract_feature(after, 1, 5, 9, 13)] += adjust;
+		net[6][extract_feature(after, 2, 6, 10, 14)] += adjust;
+		net[7][extract_feature(after, 3, 7, 11, 15)] += adjust;
+	}
 
 protected:
 	virtual void init_weights(const std::string& info) {
