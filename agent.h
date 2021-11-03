@@ -70,9 +70,9 @@ protected:
 /**
  * base agent for agents with weight tables and a learning rate
  */
-class weight_agent : public agent {
+class player : public agent {
 public:
-	weight_agent(const std::string& args = "") : agent(args), alpha(0) {
+	player(const std::string& args = "") : agent("name=dummy role=player " +args), alpha(0) {
 		if (meta.find("init") != meta.end())
 			init_weights(meta["init"]);
 		if (meta.find("load") != meta.end())
@@ -80,15 +80,61 @@ public:
 		if (meta.find("alpha") != meta.end())
 			alpha = float(meta["alpha"]);
 	}
-	virtual ~weight_agent() {
+	virtual ~player() {
 		if (meta.find("save") != meta.end())
 			save_weights(meta["save"]);
 	}
+
+	virtual action take_action(const board& before) {
+		int best_op = -1;
+		int best_reward = -1;
+		int best_value = -99999;
+
+		for(int op : {0, 1, 2, 3}){
+			board after = before;
+			int reward = after.slide(op);
+			if(reward == -1) continue;
+
+			float value = estimate_value(after);
+			if(reward + value > best_reward + best_value){
+				best_op = op;
+				best_reward = reward;
+				best_value = value;
+			}
+		}
+
+		return action(best_op);
+	}
+
+	int extract_feature(const board& after ,int a, int b, int c,int d){
+		return after(a) * 25 * 25 *25 + after(b) * 25 *25 + after(c) * 25 + after(d);
+	}
+	float estimate_value(const board& after) const {
+		float value = 0;
+		value += net[0][extract_feature(after, 0, 1, 2, 3)];
+		value += net[1][extract_feature(after, 4, 5, 6, 7)];
+		value += net[2][extract_feature(after, 8 ,9 ,10 ,11)];
+		value += net[3][extract_feature(after, 12 ,13 ,14 ,15)];
+		value += net[4][extract_feature(after, 0, 4, 8, 12)];
+		value += net[5][extract_feature(after, 1, 5, 9, 13)];
+		value += net[6][extract_feature(after, 2, 6, 10, 14)];
+		value += net[7][extract_feature(after, 3, 7, 11, 15];
+		return value;
+	}
+
 
 protected:
 	virtual void init_weights(const std::string& info) {
 //		net.emplace_back(65536); // create an empty weight table with size 65536
 //		net.emplace_back(65536); // create an empty weight table with size 65536
+		net.emplace_back(25 * 25 * 25 *25);
+		net.emplace_back(25 * 25 * 25 *25);
+		net.emplace_back(25 * 25 * 25 *25);
+		net.emplace_back(25 * 25 * 25 *25);
+		net.emplace_back(25 * 25 * 25 *25);
+		net.emplace_back(25 * 25 * 25 *25);
+		net.emplace_back(25 * 25 * 25 *25);
+		net.emplace_back(25 * 25 * 25 *25);
 	}
 	virtual void load_weights(const std::string& path) {
 		std::ifstream in(path, std::ios::in | std::ios::binary);
@@ -143,9 +189,9 @@ private:
  * dummy player
  * select a legal action randomly
  */
-class player : public random_agent {
+class dummy_player : public random_agent {
 public:
-	player(const std::string& args = "") : random_agent("name=dummy role=player " + args),
+	dummy_player(const std::string& args = "") : random_agent("name=dummy role=player " + args),
 		opcode({ 0, 1, 2, 3 }) {}
 
 	virtual action take_action(const board& before) {
